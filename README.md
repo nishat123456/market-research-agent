@@ -1,137 +1,120 @@
-# 🔬 Autonomous Market Research Agent
+# Autonomous Market Research Agent
 
-A multi-agent system that automates deep-dive market analysis using LangGraph for stateful task orchestration.
+**Multi-agent LLM system that decomposes a research topic into parallel subqueries and synthesizes a structured 2-3 page report in under 60 seconds.**
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-green)
-![Groq](https://img.shields.io/badge/LLM-Groq-orange)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://python.org)
+[![LangGraph](https://img.shields.io/badge/LangGraph-multi--agent-green)](https://github.com/langchain-ai/langgraph)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+---
 
 ## Overview
 
-This tool takes a research topic and automatically:
-1. **Plans** - Breaks down the topic into specific research questions
-2. **Researches** - Searches the web and analyzes results for each question
-3. **Synthesizes** - Compiles findings into a structured research report
+Most LLM research tools are single-pass wrappers: one prompt in, one answer out. This system uses a stateful 3-agent pipeline where a Planner breaks the topic into specific research questions, independent Researcher agents query the web in parallel, and a Writer synthesizes everything into a structured report with an executive summary.
 
-### Architecture
+The result: deeper coverage, better source diversity, and faster completion than sequential single-agent approaches.
+
+---
+
+## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Planner   │────▶│  Researcher  │────▶│   Writer    │
-│    Agent    │     │    Agent     │     │    Agent    │
-└─────────────┘     └──────────────┘     └─────────────┘
-                           │
-                    ┌──────┴──────┐
-                    │  Web Search │
-                    │    Tools    │
-                    └─────────────┘
+Input Topic
+     │
+     ▼
+┌──────────┐
+│  Planner │  Decomposes topic into 3-5 specific research questions
+└──────────┘
+     │
+     ▼ (parallel)
+┌────────────┐  ┌────────────┐  ┌────────────┐
+│ Researcher │  │ Researcher │  │ Researcher │  Each handles one subquery
+│   Agent 1  │  │   Agent 2  │  │   Agent N  │  Web search + synthesis
+└────────────┘  └────────────┘  └────────────┘
+     │               │               │
+     └───────────────┴───────────────┘
+                     │
+                     ▼
+              ┌────────────┐
+              │   Writer   │  Combines findings into structured markdown report
+              └────────────┘
+                     │
+                     ▼
+           Structured Research Report
+           (Executive Summary + Sections + Key Takeaways)
 ```
 
-## Features
+**State management:** LangGraph handles the agent graph, state transitions, and parallel execution. Each agent's output is passed downstream as typed state.
 
-- **Multi-Agent Orchestration**: Uses LangGraph for stateful workflow management
-- **Autonomous Research**: Generates sub-questions and researches each independently
-- **Web Search Integration**: Real-time data gathering via DuckDuckGo
-- **Structured Reports**: Outputs professional markdown reports with executive summaries
+---
 
-## Installation
+## Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Agent orchestration | LangGraph |
+| LLM inference | Groq (Llama 3.3 70B) |
+| Web search | DuckDuckGo Search API |
+| Output format | Structured markdown |
+| Language | Python 3.10+ |
+
+---
+
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/nishat123456/market-research-agent.git
+git clone https://github.com/nishat123456/market-research-agent
 cd market-research-agent
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+python -m venv venv && source venv/activate
 pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+cp .env.example .env  # add your GROQ_API_KEY
 ```
 
-## Getting a Groq API Key
-
-1. Go to [console.groq.com](https://console.groq.com)
-2. Sign up for a free account
-3. Navigate to API Keys
-4. Create a new key and copy it to your `.env` file
-
-## Usage
-
-### Command Line
-
 ```bash
-# With topic as argument
-python main.py "Electric vehicle market in Southeast Asia"
+# Run with a topic
+python main.py "Retrieval-Augmented Generation in enterprise software 2025"
 
 # Interactive mode
 python main.py
 ```
 
-### Example Output
+Get a free Groq API key at [console.groq.com](https://console.groq.com).
+
+---
+
+## Example Output Structure
 
 ```
-🚀 Starting Market Research Agent
-📌 Topic: Electric vehicle market in Southeast Asia
+# Electric Vehicle Market in Southeast Asia
 
-🎯 Planning research for: Electric vehicle market in Southeast Asia
-📋 Generated 5 research questions
-   1. What is the current market size and growth rate of EVs in Southeast Asia?
-   2. Which countries have the highest adoption rates?
-   ...
+## Executive Summary
+...
 
-🔍 Researching (1/5): What is the current market size...
-   Found 8 sources
+## Market Size and Growth Trends
+...
 
-✍️  Writing final report...
-✅ Report complete!
+## Key Players and Competitive Landscape
+...
 
-💾 Report saved to: outputs/Electric_vehicle_market_20240202_143022.md
+## Infrastructure and Policy Environment
+...
+
+## Key Takeaways
+1. ...
+2. ...
+3. ...
 ```
 
-## Project Structure
+---
 
-```
-market-research-agent/
-├── main.py          # Entry point and CLI
-├── agents.py        # Agent definitions (Planner, Researcher, Writer)
-├── graph.py         # LangGraph workflow orchestration
-├── tools.py         # Web search tools
-├── requirements.txt # Dependencies
-├── .env.example     # Environment template
-└── outputs/         # Generated reports
-```
+## Design Decisions
 
-## Tech Stack
+**Why LangGraph over a simple loop?** Stateful graph execution lets each agent pass structured typed output to the next stage rather than raw strings. This makes the pipeline composable and the state inspectable at each node.
 
-- **Python 3.10+**
-- **LangGraph** - Multi-agent workflow orchestration
-- **LangChain** - LLM framework
-- **Groq** - Fast LLM inference (Llama 3.3 70B)
-- **DuckDuckGo Search** - Free web search API
+**Why Groq?** Sub-second inference on Llama 3.3 70B keeps the full pipeline under 60 seconds even with parallel subquery execution.
 
-## How It Works
+**Why DuckDuckGo?** No API key required, no rate limit for moderate use, and sufficient for research-grade source diversity.
 
-1. **Planning Phase**: The Planner agent analyzes the input topic and generates 3-5 specific research questions that will comprehensively cover the subject.
+---
 
-2. **Research Phase**: For each question, the Researcher agent:
-   - Performs web searches using DuckDuckGo
-   - Analyzes and synthesizes the search results
-   - Extracts key insights with citations
-
-3. **Writing Phase**: The Writer agent takes all findings and produces a structured report with:
-   - Executive summary
-   - Key findings organized by theme
-   - Conclusion and future outlook
-
-## License
-
-MIT
-
-## Author
-
-M M Nishat - [GitHub](https://github.com/nishat123456)
+**Author:** Mustaqim Nishat | [nishat12sikdar@gmail.com](mailto:nishat12sikdar@gmail.com)
